@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="离线运行的圆形公司印章设计预览工具">
+    <title>圆形公司印章生成器 · 单文件版</title>
+    <style>
+:root {
+  --accent: #d71920;
+  --accent-dark: #ae1117;
+  --ink: #181b21;
+  --muted: #6d7380;
+  --line: #e8e9ed;
+  --soft: #f6f6f7;
+  --paper: #ffffff;
+  --shadow: 0 24px 70px rgba(29, 31, 38, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: light; scroll-behavior: smooth; }
+
+body {
+  min-width: 320px;
+  margin: 0;
+  color: var(--ink);
+  background: #f7f7f5;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input { font: inherit; }
+button, summary, input[type="range"], input[type="color"], .upload-button { cursor: pointer; }
+button:focus-visible, input:focus-visible, summary:focus-visible, .upload-button:focus-within { outline: 3px solid rgba(215, 25, 32, 0.2); outline-offset: 2px; }
+
+.page-glow { position: fixed; z-index: -1; border-radius: 50%; filter: blur(1px); pointer-events: none; }
+.page-glow--one { top: -260px; right: -210px; width: 620px; height: 620px; border: 1px solid rgba(215,25,32,.08); box-shadow: inset 0 0 120px rgba(215,25,32,.025); }
+.page-glow--two { bottom: -420px; left: -300px; width: 820px; height: 820px; border: 1px solid rgba(15,17,21,.05); }
+
+.site-header {
+  width: min(1240px, calc(100% - 48px));
+  height: 82px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(24,27,33,.08);
+}
+
+.brand { display: inline-flex; gap: 12px; align-items: center; color: var(--ink); font-weight: 750; text-decoration: none; letter-spacing: -.02em; }
+.brand-mark { width: 35px; height: 35px; display: grid; place-items: center; border: 1.5px solid var(--accent); color: var(--accent); font-family: "STKaiti", "KaiTi", serif; font-size: 19px; transform: rotate(-4deg); }
+.local-badge { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border: 1px solid #dfe7df; border-radius: 999px; color: #4d6652; background: #f9fcf9; font-size: 12px; }
+.local-badge i, .live-indicator i { width: 6px; height: 6px; border-radius: 50%; background: #35a853; box-shadow: 0 0 0 4px rgba(53,168,83,.1); }
+
+.app-shell { width: min(1240px, calc(100% - 48px)); margin: 54px auto 0; }
+.intro { display: grid; grid-template-columns: 1.15fr .85fr; gap: 28px 64px; align-items: end; margin-bottom: 40px; }
+.eyebrow { margin: 0 0 12px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .28em; }
+h1 { margin: 0; font-family: "Songti SC", "STSong", Georgia, serif; font-size: clamp(42px, 5vw, 68px); font-weight: 600; line-height: 1.08; letter-spacing: -.055em; }
+h1 span { color: var(--accent); }
+.intro-copy { max-width: 520px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.9; }
+.notice { grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; padding: 13px 16px; border: 1px solid #f0d9da; border-radius: 8px; color: #715153; background: rgba(255,250,250,.74); font-size: 12px; }
+.notice p { margin: 0; line-height: 1.6; }
+.notice strong { margin-right: 9px; color: var(--accent-dark); }
+.notice-icon { flex: 0 0 auto; width: 19px; height: 19px; display: grid; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: var(--accent); font-size: 11px; font-weight: 800; }
+
+.workspace { display: grid; grid-template-columns: minmax(340px, 430px) minmax(0, 1fr); align-items: start; gap: 24px; }
+.control-panel, .preview-panel { border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.92); box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+.control-panel { overflow: hidden; }
+.preview-panel { position: sticky; top: 20px; padding: 28px; }
+.panel-heading { min-height: 78px; display: flex; align-items: center; justify-content: space-between; padding: 24px 26px 18px; }
+.panel-heading > div { display: flex; align-items: center; gap: 11px; }
+.panel-heading h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+.step-number { color: var(--accent); font-family: Georgia, serif; font-size: 12px; font-weight: 700; }
+.text-button { padding: 6px; border: 0; color: var(--muted); background: transparent; font-size: 12px; }
+.text-button:hover { color: var(--accent); }
+
+.form-section { padding: 0 26px 20px; }
+.field-label { display: block; margin-bottom: 8px; color: #343840; font-size: 12px; font-weight: 700; }
+.field-label span { margin-left: 5px; color: var(--accent); font-size: 10px; font-weight: 600; }
+.field-label .optional { color: #9a9da5; }
+.text-input { width: 100%; height: 43px; padding: 0 13px; border: 1px solid #dadce1; border-radius: 7px; color: var(--ink); background: #fff; font-size: 14px; transition: border-color .2s, box-shadow .2s; }
+.text-input:focus { border-color: var(--accent); outline: 0; box-shadow: 0 0 0 3px rgba(215,25,32,.07); }
+.text-input.is-invalid { border-color: var(--accent); }
+.number-input { letter-spacing: .08em; }
+.field-meta { display: flex; justify-content: space-between; margin-top: 6px; color: #a0a3aa; font-size: 10px; }
+
+.settings-group { border-top: 1px solid var(--line); }
+.settings-group summary { min-height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; list-style: none; color: #42464f; font-size: 12px; font-weight: 750; user-select: none; }
+.settings-group summary::-webkit-details-marker { display: none; }
+.settings-group summary span { display: flex; align-items: center; gap: 10px; }
+.settings-group summary i { width: 6px; height: 6px; border: 1px solid var(--accent); transform: rotate(45deg); }
+.settings-group summary b { color: #8b8e96; font-size: 15px; transition: transform .2s; }
+.settings-group[open] summary b { transform: rotate(180deg); }
+.settings-body { padding: 2px 26px 24px; }
+
+.color-row { display: flex; align-items: center; justify-content: space-between; margin: 5px 0 20px; }
+.color-row .field-label { margin: 0; }
+.color-control { display: flex; align-items: center; gap: 8px; }
+.color-control input { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 50%; background: transparent; overflow: hidden; }
+.color-control input::-webkit-color-swatch-wrapper { padding: 0; }
+.color-control input::-webkit-color-swatch { border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #d6d8dd; }
+.color-control output { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px; }
+
+.range-field { margin-bottom: 17px; }
+.range-field > div { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; color: #4b4f57; font-size: 11px; }
+.range-field output { color: #8d9098; font-family: ui-monospace, monospace; }
+input[type="range"] { width: 100%; height: 3px; margin: 5px 0; appearance: none; border-radius: 999px; background: linear-gradient(to right, var(--accent) var(--range-progress, 50%), #e4e5e8 var(--range-progress, 50%)); }
+input[type="range"]::-webkit-slider-thumb { width: 13px; height: 13px; appearance: none; border: 2px solid #fff; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 5px rgba(0,0,0,.15); }
+input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+input[type="range"]:disabled { filter: grayscale(1); opacity: .35; cursor: not-allowed; }
+
+.upload-area { margin-top: 7px; padding: 14px; border: 1px dashed #d8dade; border-radius: 8px; background: #fbfbfb; text-align: center; }
+.upload-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; text-align: left; }
+.upload-title span { color: #4b4f57; font-size: 11px; font-weight: 700; }
+.upload-title small { color: #a1a4ab; font-size: 9px; }
+.upload-button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 15px; border: 1px solid #d9dadd; border-radius: 6px; color: #52565e; background: #fff; font-size: 11px; font-weight: 650; }
+.upload-button:hover { border-color: var(--accent); color: var(--accent); }
+.upload-area p { margin: 8px 0 0; color: #9b9ea5; font-size: 9px; overflow-wrap: anywhere; }
+.overlay-controls { margin-top: 16px; transition: opacity .2s; }
+.overlay-controls.is-disabled { opacity: .45; }
+.remove-button { width: 100%; height: 34px; border: 1px solid #ead3d4; border-radius: 6px; color: var(--accent-dark); background: #fffafa; font-size: 11px; }
+.remove-button:disabled { opacity: .45; cursor: not-allowed; }
+
+.preview-heading { padding: 0 0 18px; min-height: auto; }
+.live-indicator { display: flex; align-items: center; gap: 8px; color: #777b83; font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .1em; }
+.live-indicator i { width: 5px; height: 5px; background: var(--accent); box-shadow: 0 0 0 4px rgba(215,25,32,.08); }
+.canvas-stage { position: relative; min-height: 420px; display: grid; place-items: center; padding: 28px; border: 1px solid #eaebee; border-radius: 9px; overflow: hidden; background-color: #fff; background-image: linear-gradient(45deg,#f0f1f3 25%,transparent 25%),linear-gradient(-45deg,#f0f1f3 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#f0f1f3 75%),linear-gradient(-45deg,transparent 75%,#f0f1f3 75%); background-position: 0 0,0 12px,12px -12px,-12px 0; background-size: 24px 24px; }
+#sealCanvas { display: block; width: min(100%, 480px); height: auto; aspect-ratio: 1; filter: drop-shadow(0 12px 16px rgba(45,22,22,.08)); }
+.corner { position: absolute; width: 12px; height: 12px; border-color: rgba(215,25,32,.45); border-style: solid; }
+.corner--tl { top: 11px; left: 11px; border-width: 1px 0 0 1px; }
+.corner--tr { top: 11px; right: 11px; border-width: 1px 1px 0 0; }
+.corner--bl { bottom: 11px; left: 11px; border-width: 0 0 1px 1px; }
+.corner--br { right: 11px; bottom: 11px; border-width: 0 1px 1px 0; }
+.preview-meta { display: flex; justify-content: space-between; align-items: center; padding: 13px 2px 11px; border-bottom: 1px solid var(--line); color: #8c9098; font-size: 10px; }
+.preview-meta span { display: flex; align-items: center; gap: 6px; }
+.preview-meta b { color: #62666e; font-family: ui-monospace, monospace; font-weight: 500; }
+.dot { width: 5px; height: 5px; border-radius: 50%; }
+.dot--red { background: var(--accent); }
+.dot--gray { background: #abb0b8; }
+.message { min-height: 31px; margin: 0; padding: 10px 2px 0; color: #758079; font-size: 11px; }
+.message.is-error { color: var(--accent-dark); }
+.message.is-success { color: #367348; }
+.action-row { display: grid; grid-template-columns: .72fr 1.28fr; gap: 10px; margin-top: 3px; }
+.secondary-button, .primary-button { min-height: 47px; border-radius: 7px; font-size: 12px; font-weight: 700; transition: transform .15s, box-shadow .15s, background .15s; }
+.secondary-button { border: 1px solid #dcdee2; color: #686c74; background: #fff; }
+.secondary-button:hover { border-color: #bfc2c8; background: #fafafa; }
+.primary-button { display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid var(--accent); color: #fff; background: var(--accent); box-shadow: 0 8px 20px rgba(215,25,32,.17); }
+.primary-button:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(215,25,32,.22); }
+.primary-button:active, .secondary-button:active { transform: translateY(1px); }
+.privacy-note { margin: 14px 0 0; color: #a0a3aa; text-align: center; font-size: 9px; }
+
+footer { width: min(1240px, calc(100% - 48px)); margin: 50px auto 26px; color: #b0b2b7; text-align: right; font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .14em; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 920px) {
+  .app-shell { margin-top: 36px; }
+  .intro { grid-template-columns: 1fr; gap: 18px; }
+  .workspace { grid-template-columns: minmax(300px, .82fr) minmax(0, 1.18fr); }
+  .preview-panel { padding: 20px; }
+  .canvas-stage { min-height: 360px; padding: 18px; }
+}
+
+@media (max-width: 760px) {
+  .site-header, .app-shell, footer { width: min(100% - 24px, 620px); }
+  .site-header { height: 68px; }
+  .workspace { grid-template-columns: 1fr; }
+  .preview-panel { position: static; }
+  .canvas-stage { min-height: auto; }
+  .intro { margin-bottom: 26px; }
+  h1 { font-size: clamp(38px, 12vw, 56px); }
+}
+
+@media (max-width: 440px) {
+  .local-badge { padding: 6px 8px; font-size: 10px; }
+  .brand { font-size: 14px; }
+  .panel-heading, .settings-group summary { padding-left: 18px; padding-right: 18px; }
+  .form-section, .settings-body { padding-left: 18px; padding-right: 18px; }
+  .preview-panel { padding: 16px; }
+  .action-row { grid-template-columns: 1fr; }
+  .preview-meta { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .notice { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}
+
+</style>
+  </head>
+  <body>
+    <div class="page-glow page-glow--one" aria-hidden="true"></div>
+    <div class="page-glow page-glow--two" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="印章设计器首页">
+        <span class="brand-mark" aria-hidden="true">印</span>
+        <span>印章设计器</span>
+      </a>
+      <span class="local-badge"><i aria-hidden="true"></i> 本地离线处理</span>
+    </header>
+
+    <main class="app-shell">
+      <section class="intro" aria-labelledby="pageTitle">
+        <div>
+          <p class="eyebrow">SEAL STUDIO</p>
+          <h1 id="pageTitle">圆形公司印章<br><span>在线生成器</span></h1>
+        </div>
+        <p class="intro-copy">输入文字并调节细节，实时生成透明背景的印章设计稿。所有内容只在你的浏览器中处理。</p>
+        <div class="notice" role="note">
+          <span class="notice-icon" aria-hidden="true">!</span>
+          <p><strong>用途声明</strong>仅供设计、演示或内部测试，不具备法律效力，请勿用于伪造或冒用真实印章。</p>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="印章生成工作区">
+        <div class="control-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step-number">01</span>
+              <h2>设置印章内容</h2>
+            </div>
+            <button class="text-button" id="resetButton" type="button">恢复默认</button>
+          </div>
+
+          <div class="form-section">
+            <label class="field-label" for="companyName">公司名称 <span>必填</span></label>
+            <input class="text-input" id="companyName" maxlength="40" value="示例科技有限公司" autocomplete="off">
+            <div class="field-meta"><span>建议 6–18 个字符</span><span id="nameCount">8 / 40</span></div>
+          </div>
+
+          <div class="form-section">
+            <label class="field-label" for="sealNumber">印章编号 <span class="optional">选填</span></label>
+            <input class="text-input number-input" id="sealNumber" maxlength="24" value="1234567890123" autocomplete="off">
+          </div>
+
+          <details class="settings-group" open>
+            <summary><span><i aria-hidden="true"></i>基础样式</span><b aria-hidden="true">⌄</b></summary>
+            <div class="settings-body">
+              <div class="color-row">
+                <label class="field-label" for="sealColor">印章颜色</label>
+                <div class="color-control">
+                  <input id="sealColor" type="color" value="#d71920" aria-label="选择印章颜色">
+                  <output id="sealColorValue" for="sealColor">#D71920</output>
+                </div>
+              </div>
+
+              <div class="range-field">
+                <div><label for="sealSize">导出尺寸</label><output id="sealSizeValue" for="sealSize">800 px</output></div>
+                <input id="sealSize" type="range" min="360" max="1200" value="800">
+              </div>
+              <div class="range-field">
+                <div><label for="fontSize">文字大小</label><output id="fontSizeValue" for="fontSize">64 px</output></div>
+                <input id="fontSize" type="range" min="36" max="100" value="64">
+              </div>
+              <div class="range-field">
+                <div><label for="letterSpacing">文字间距</label><output id="letterSpacingValue" for="letterSpacing">8 px</output></div>
+                <input id="letterSpacing" type="range" min="0" max="24" value="8">
+              </div>
+              <div class="range-field">
+                <div><label for="borderWidth">边框粗细</label><output id="borderWidthValue" for="borderWidth">12 px</output></div>
+                <input id="borderWidth" type="range" min="4" max="24" value="12">
+              </div>
+              <div class="range-field">
+                <div><label for="starSize">五角星大小</label><output id="starSizeValue" for="starSize">92 px</output></div>
+                <input id="starSize" type="range" min="40" max="160" value="92">
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-group">
+            <summary><span><i aria-hidden="true"></i>高级效果</span><b aria-hidden="true">⌄</b></summary>
+            <div class="settings-body">
+              <div class="range-field">
+                <div><label for="opacity">整体透明度</label><output id="opacityValue" for="opacity">100%</output></div>
+                <input id="opacity" type="range" min="20" max="100" value="100">
+              </div>
+              <div class="range-field">
+                <div><label for="rotation">旋转角度</label><output id="rotationValue" for="rotation">0°</output></div>
+                <input id="rotation" type="range" min="-180" max="180" value="0">
+              </div>
+              <div class="range-field">
+                <div><label for="distress">做旧强度</label><output id="distressValue" for="distress">8%</output></div>
+                <input id="distress" type="range" min="0" max="60" value="8">
+              </div>
+
+              <div class="upload-area">
+                <div class="upload-title"><span>叠加本地图片</span><small>PNG / JPEG / WebP</small></div>
+                <input id="overlayInput" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp">
+                <label class="upload-button" for="overlayInput"><span aria-hidden="true">＋</span> 选择图片</label>
+                <p id="fileName">图片不会上传到服务器</p>
+              </div>
+
+              <div id="overlayControls" class="overlay-controls is-disabled">
+                <div class="range-field">
+                  <div><label for="overlayScale">图片缩放</label><output id="overlayScaleValue" for="overlayScale">60%</output></div>
+                  <input id="overlayScale" type="range" min="10" max="150" value="60" disabled>
+                </div>
+                <div class="range-field">
+                  <div><label for="overlayOpacity">图片透明度</label><output id="overlayOpacityValue" for="overlayOpacity">40%</output></div>
+                  <input id="overlayOpacity" type="range" min="0" max="100" value="40" disabled>
+                </div>
+                <button class="remove-button" id="removeImageButton" type="button" disabled>移除叠加图片</button>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <aside class="preview-panel" aria-labelledby="previewTitle">
+          <div class="panel-heading preview-heading">
+            <div>
+              <span class="step-number">02</span>
+              <h2 id="previewTitle">实时预览</h2>
+            </div>
+            <span class="live-indicator"><i aria-hidden="true"></i> LIVE</span>
+          </div>
+
+          <div class="canvas-stage">
+            <canvas id="sealCanvas" width="800" height="800">当前浏览器不支持 Canvas，请升级到最新版浏览器。</canvas>
+            <span class="corner corner--tl" aria-hidden="true"></span>
+            <span class="corner corner--tr" aria-hidden="true"></span>
+            <span class="corner corner--bl" aria-hidden="true"></span>
+            <span class="corner corner--br" aria-hidden="true"></span>
+          </div>
+
+          <div class="preview-meta">
+            <span><i class="dot dot--red" aria-hidden="true"></i><b id="metaSize">800 × 800</b> px</span>
+            <span><i class="dot dot--gray" aria-hidden="true"></i>透明背景 PNG</span>
+          </div>
+
+          <p id="message" class="message" role="status" aria-live="polite"></p>
+
+          <div class="action-row">
+            <button class="secondary-button" id="clearButton" type="button">清空文字</button>
+            <button class="primary-button" id="downloadButton" type="button">
+              <span aria-hidden="true">↓</span> 下载透明 PNG
+            </button>
+          </div>
+          <p class="privacy-note"><span aria-hidden="true">⌁</span> 全程本地处理，不保存任何数据</p>
+        </aside>
+      </section>
+    </main>
+
+    <footer>SEAL STUDIO · OFFLINE CANVAS TOOL</footer>
+    <script>
+'use strict';
+
+const DEFAULTS = Object.freeze({
+  companyName: '示例科技有限公司',
+  sealNumber: '1234567890123',
+  sealColor: '#d71920',
+  sealSize: 800,
+  fontSize: 64,
+  letterSpacing: 8,
+  borderWidth: 12,
+  starSize: 92,
+  opacity: 100,
+  rotation: 0,
+  distress: 8,
+  overlayScale: 60,
+  overlayOpacity: 40,
+});
+
+function clamp(value, min, max) {
+  const number = Number(value);
+  return Math.min(max, Math.max(min, Number.isFinite(number) ? number : min));
+}
+
+function normalizeColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(String(value ?? '')) ? String(value) : DEFAULTS.sealColor;
+}
+
+function normalizeState(raw = {}) {
+  return {
+    ...raw,
+    companyName: String(raw.companyName ?? '').trim(),
+    sealNumber: String(raw.sealNumber ?? '').trim(),
+    sealColor: normalizeColor(raw.sealColor),
+    sealSize: clamp(raw.sealSize ?? DEFAULTS.sealSize, 360, 1200),
+    fontSize: clamp(raw.fontSize ?? DEFAULTS.fontSize, 36, 100),
+    letterSpacing: clamp(raw.letterSpacing ?? DEFAULTS.letterSpacing, 0, 24),
+    borderWidth: clamp(raw.borderWidth ?? DEFAULTS.borderWidth, 4, 24),
+    starSize: clamp(raw.starSize ?? DEFAULTS.starSize, 40, 160),
+    opacity: clamp(raw.opacity ?? DEFAULTS.opacity, 20, 100),
+    rotation: clamp(raw.rotation ?? DEFAULTS.rotation, -180, 180),
+    distress: clamp(raw.distress ?? DEFAULTS.distress, 0, 60),
+    overlayScale: clamp(raw.overlayScale ?? DEFAULTS.overlayScale, 10, 150),
+    overlayOpacity: clamp(raw.overlayOpacity ?? DEFAULTS.overlayOpacity, 0, 100),
+  };
+}
+
+function seededRandom(seed) {
+  let value = seed >>> 0;
+  return () => ((value = (value * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+  for (const char of String(value)) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function getArcLayout(text, radius, spacing, fontSize) {
+  const chars = [...String(text)];
+  const step = (Number(fontSize) + Number(spacing)) / Number(radius);
+  const start = -Math.PI / 2 - (step * (chars.length - 1)) / 2;
+  return chars.map((char, index) => ({ char, angle: start + step * index }));
+}
+
+function makeDownloadName(companyName) {
+  const safeName = String(companyName ?? '')
+    .trim()
+    .replace(/[\\/:*?"<>|\s]+/g, '');
+  return `${safeName || '公司印章'}-印章预览.png`;
+}
+
+function fitArcFontSize(ctx, text, requestedSize, radius, spacing) {
+  let size = requestedSize;
+  const maxSpan = Math.PI * 1.48;
+  while (size > 36) {
+    ctx.font = `700 ${size}px "Songti SC", "STSong", "SimSun", serif`;
+    const widths = [...text].map((char) => ctx.measureText(char).width);
+    const span = (widths.reduce((sum, width) => sum + width, 0) + spacing * Math.max(0, widths.length - 1)) / radius;
+    if (span <= maxSpan) break;
+    size -= 1;
+  }
+  return size;
+}
+
+function drawArcText(ctx, state, size) {
+  if (!state.companyName) return;
+
+  const radius = size * 0.335;
+  const fontSize = fitArcFontSize(ctx, state.companyName, state.fontSize, radius, state.letterSpacing);
+  ctx.font = `700 ${fontSize}px "Songti SC", "STSong", "SimSun", serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const characters = [...state.companyName];
+  const widths = characters.map((char) => ctx.measureText(char).width);
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + state.letterSpacing * Math.max(0, characters.length - 1);
+  let offset = -totalWidth / 2;
+
+  characters.forEach((char, index) => {
+    const center = offset + widths[index] / 2;
+    const angle = -Math.PI / 2 + center / radius;
+    ctx.save();
+    ctx.translate(Math.cos(angle) * radius, Math.sin(angle) * radius);
+    ctx.rotate(angle + Math.PI / 2);
+    ctx.fillText(char, 0, 0);
+    ctx.restore();
+    offset += widths[index] + state.letterSpacing;
+  });
+}
+
+function drawStar(ctx, cx, cy, radius) {
+  const innerRadius = radius * 0.382;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.beginPath();
+  for (let index = 0; index < 10; index += 1) {
+    const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+    const pointRadius = index % 2 === 0 ? radius : innerRadius;
+    const x = Math.cos(angle) * pointRadius;
+    const y = Math.sin(angle) * pointRadius;
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawNumber(ctx, state, size) {
+  if (!state.sealNumber) return;
+  const numberSize = clamp(size * 0.036, 18, 44);
+  ctx.save();
+  ctx.font = `600 ${numberSize}px ui-monospace, "SFMono-Regular", Consolas, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(state.sealNumber, 0, size * 0.275);
+  ctx.restore();
+}
+
+function drawOverlay(ctx, state, size) {
+  if (!state.overlayImage) return;
+  const image = state.overlayImage;
+  const maxSide = size * 0.45 * (state.overlayScale / 100);
+  const ratio = Math.min(maxSide / image.naturalWidth, maxSide / image.naturalHeight);
+  const width = image.naturalWidth * ratio;
+  const height = image.naturalHeight * ratio;
+  ctx.save();
+  ctx.globalAlpha = state.overlayOpacity / 100;
+  ctx.drawImage(image, -width / 2, -height / 2, width, height);
+  ctx.restore();
+}
+
+function applyDistress(ctx, size, strength, seedText) {
+  if (strength <= 0) return;
+  const random = seededRandom(hashString(`${seedText}|${strength}|${size}`));
+  const count = Math.round((size * size * strength) / 15500);
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  for (let index = 0; index < count; index += 1) {
+    const angle = random() * Math.PI * 2;
+    const distance = Math.sqrt(random()) * size * 0.445;
+    const radius = (0.7 + random() * 2.5) * (size / 800);
+    ctx.beginPath();
+    ctx.arc(size / 2 + Math.cos(angle) * distance, size / 2 + Math.sin(angle) * distance, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function renderSeal(target, inputState) {
+  if (!target || typeof target.getContext !== 'function') return false;
+  const state = normalizeState(inputState);
+  const size = Math.round(state.sealSize);
+  const layer = document.createElement('canvas');
+  layer.width = size;
+  layer.height = size;
+  const ctx = layer.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return false;
+
+  ctx.save();
+  ctx.translate(size / 2, size / 2);
+  ctx.rotate((state.rotation * Math.PI) / 180);
+  ctx.strokeStyle = state.sealColor;
+  ctx.fillStyle = state.sealColor;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = state.borderWidth;
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.44, 0, Math.PI * 2);
+  ctx.stroke();
+  drawArcText(ctx, state, size);
+  drawOverlay(ctx, state, size);
+  drawStar(ctx, 0, 0, state.starSize);
+  drawNumber(ctx, state, size);
+  ctx.restore();
+
+  applyDistress(ctx, size, state.distress, `${state.companyName}|${state.sealNumber}`);
+
+  target.width = size;
+  target.height = size;
+  const output = target.getContext('2d');
+  if (!output) return false;
+  output.clearRect(0, 0, size, size);
+  output.globalAlpha = state.opacity / 100;
+  output.drawImage(layer, 0, 0);
+  output.globalAlpha = 1;
+  return true;
+}
+
+function initApp() {
+  const canvas = document.getElementById('sealCanvas');
+  if (!canvas || !canvas.getContext) return;
+
+  const controlIds = [
+    'companyName', 'sealNumber', 'sealColor', 'sealSize', 'fontSize',
+    'letterSpacing', 'borderWidth', 'starSize', 'opacity', 'rotation',
+    'distress', 'overlayScale', 'overlayOpacity',
+  ];
+  const controls = Object.fromEntries(controlIds.map((id) => [id, document.getElementById(id)]));
+  const overlayInput = document.getElementById('overlayInput');
+  const overlayControls = document.getElementById('overlayControls');
+  const removeImageButton = document.getElementById('removeImageButton');
+  const resetButton = document.getElementById('resetButton');
+  const clearButton = document.getElementById('clearButton');
+  const downloadButton = document.getElementById('downloadButton');
+  const message = document.getElementById('message');
+  const nameCount = document.getElementById('nameCount');
+  const metaSize = document.getElementById('metaSize');
+  const fileName = document.getElementById('fileName');
+
+  let overlayImage = null;
+  let renderFrame = 0;
+  let messageTimer = 0;
+
+  const outputFormats = {
+    sealSize: (value) => `${value} px`,
+    fontSize: (value) => `${value} px`,
+    letterSpacing: (value) => `${value} px`,
+    borderWidth: (value) => `${value} px`,
+    starSize: (value) => `${value} px`,
+    opacity: (value) => `${value}%`,
+    rotation: (value) => `${value}°`,
+    distress: (value) => `${value}%`,
+    overlayScale: (value) => `${value}%`,
+    overlayOpacity: (value) => `${value}%`,
+  };
+
+  function showMessage(text = '', type = '') {
+    window.clearTimeout(messageTimer);
+    message.textContent = text;
+    message.className = `message${type ? ` is-${type}` : ''}`;
+    if (text && type === 'success') {
+      messageTimer = window.setTimeout(() => showMessage(), 2600);
+    }
+  }
+
+  function updateRange(input) {
+    if (!input || input.type !== 'range') return;
+    const min = Number(input.min);
+    const max = Number(input.max);
+    const progress = ((Number(input.value) - min) / (max - min)) * 100;
+    input.style.setProperty('--range-progress', `${progress}%`);
+    const output = document.getElementById(`${input.id}Value`);
+    if (output && outputFormats[input.id]) output.value = outputFormats[input.id](input.value);
+  }
+
+  function readState() {
+    return normalizeState({
+      companyName: controls.companyName.value,
+      sealNumber: controls.sealNumber.value,
+      sealColor: controls.sealColor.value,
+      sealSize: controls.sealSize.value,
+      fontSize: controls.fontSize.value,
+      letterSpacing: controls.letterSpacing.value,
+      borderWidth: controls.borderWidth.value,
+      starSize: controls.starSize.value,
+      opacity: controls.opacity.value,
+      rotation: controls.rotation.value,
+      distress: controls.distress.value,
+      overlayScale: controls.overlayScale.value,
+      overlayOpacity: controls.overlayOpacity.value,
+      overlayImage,
+    });
+  }
+
+  function renderFromControls() {
+    cancelAnimationFrame(renderFrame);
+    renderFrame = requestAnimationFrame(() => {
+      const state = readState();
+      renderSeal(canvas, state);
+      nameCount.textContent = `${[...controls.companyName.value].length} / 40`;
+      metaSize.textContent = `${state.sealSize} × ${state.sealSize}`;
+      document.getElementById('sealColorValue').value = state.sealColor.toUpperCase();
+      Object.values(controls).forEach(updateRange);
+    });
+  }
+
+  function setOverlayEnabled(enabled) {
+    controls.overlayScale.disabled = !enabled;
+    controls.overlayOpacity.disabled = !enabled;
+    removeImageButton.disabled = !enabled;
+    overlayControls.classList.toggle('is-disabled', !enabled);
+  }
+
+  function removeOverlay() {
+    overlayImage = null;
+    overlayInput.value = '';
+    fileName.textContent = '图片不会上传到服务器';
+    setOverlayEnabled(false);
+    renderFromControls();
+  }
+
+  function applyDefaults(clearText = false) {
+    Object.entries(DEFAULTS).forEach(([key, value]) => {
+      if (controls[key]) controls[key].value = value;
+    });
+    if (clearText) {
+      controls.companyName.value = '';
+      controls.sealNumber.value = '';
+    }
+    controls.companyName.classList.remove('is-invalid');
+    removeOverlay();
+    showMessage();
+    renderFromControls();
+  }
+
+  function loadOverlay(file) {
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!file || !allowed.includes(file.type)) {
+      showMessage('图片无法读取，请选择 PNG、JPEG 或 WebP 文件。', 'error');
+      overlayInput.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => showMessage('图片读取失败，请重新选择文件。', 'error');
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => showMessage('图片无法解码，请更换文件后重试。', 'error');
+      image.onload = () => {
+        overlayImage = image;
+        fileName.textContent = file.name;
+        setOverlayEnabled(true);
+        showMessage('叠加图片已载入。', 'success');
+        renderFromControls();
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function downloadSeal() {
+    const state = readState();
+    if (!state.companyName) {
+      controls.companyName.classList.add('is-invalid');
+      controls.companyName.focus();
+      showMessage('请先填写公司名称，再下载印章图片。', 'error');
+      return;
+    }
+
+    controls.companyName.classList.remove('is-invalid');
+    renderSeal(canvas, state);
+    if (typeof canvas.toBlob !== 'function') {
+      showMessage('当前浏览器不支持 PNG 导出，请升级浏览器。', 'error');
+      return;
+    }
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        showMessage('图片生成失败，请重试。', 'error');
+        return;
+      }
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = makeDownloadName(state.companyName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showMessage('透明背景 PNG 已生成。', 'success');
+    }, 'image/png');
+  }
+
+  Object.values(controls).forEach((control) => {
+    control.addEventListener('input', () => {
+      if (control === controls.companyName && control.value.trim()) {
+        control.classList.remove('is-invalid');
+        if (message.classList.contains('is-error')) showMessage();
+      }
+      updateRange(control);
+      renderFromControls();
+    });
+  });
+
+  overlayInput.addEventListener('change', () => loadOverlay(overlayInput.files[0]));
+  removeImageButton.addEventListener('click', removeOverlay);
+  resetButton.addEventListener('click', () => applyDefaults(false));
+  clearButton.addEventListener('click', () => applyDefaults(true));
+  downloadButton.addEventListener('click', downloadSeal);
+
+  setOverlayEnabled(false);
+  renderFromControls();
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    DEFAULTS,
+    clamp,
+    normalizeState,
+    seededRandom,
+    hashString,
+    getArcLayout,
+    makeDownloadName,
+    fitArcFontSize,
+    drawStar,
+    renderSeal,
+  };
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initApp);
+  else initApp();
+}
+
+</script>
+  </body>
+</html>
