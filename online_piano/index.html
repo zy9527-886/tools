@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>88键在线钢琴</title>
+  <style>
+    :root {
+      --bg: #101114;
+      --panel: #191b20;
+      --text: #f6f1e8;
+      --muted: #a9adb7;
+      --accent: #2bb3a3;
+      --accent-strong: #f0b84a;
+      --white-key: #fbfaf6;
+      --white-key-edge: #c9c4ba;
+      --black-key: #15161a;
+      --black-key-edge: #050608;
+      --key-width: 34px;
+      --white-height: min(56vh, 390px);
+      --black-height: calc(var(--white-height) * .62);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 32%),
+        radial-gradient(circle at 12% 15%, rgba(43, 179, 163, .18), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 16px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      background: rgba(25, 27, 32, .86);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, .28);
+      backdrop-filter: blur(12px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(20px, 3vw, 34px);
+      font-weight: 780;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .status {
+      min-width: 92px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .08);
+      color: var(--accent-strong);
+      font-size: 18px;
+      font-weight: 750;
+      text-align: center;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .control-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    button {
+      height: 30px;
+      min-width: 34px;
+      border: 0;
+      border-radius: 7px;
+      background: #2b2f38;
+      color: var(--text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #373d48;
+    }
+
+    button:active,
+    button.active {
+      background: var(--accent);
+      color: #061412;
+    }
+
+    input[type="range"] {
+      width: 116px;
+      accent-color: var(--accent);
+    }
+
+    .stage {
+      min-height: 0;
+      display: flex;
+      align-items: end;
+      padding: 14px 0 4px;
+    }
+
+    .keyboard-shell {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 22px 10px 16px;
+      border: 1px solid rgba(255, 255, 255, .09);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #24262d 0%, #17191e 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 22px 70px rgba(0, 0, 0, .36);
+      scrollbar-color: var(--accent) #252832;
+    }
+
+    .keyboard {
+      position: relative;
+      height: var(--white-height);
+      min-width: calc(var(--key-width) * 52);
+      width: calc(var(--key-width) * 52);
+      margin: 0 auto;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .key {
+      position: absolute;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 14px;
+      border: 0;
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .key.white {
+      top: 0;
+      width: var(--key-width);
+      height: var(--white-height);
+      border: 1px solid var(--white-key-edge);
+      border-bottom-width: 6px;
+      border-radius: 0 0 6px 6px;
+      background: linear-gradient(90deg, #e7e3da 0%, var(--white-key) 12%, #fffefa 55%, #dfd9cc 100%);
+      color: #545862;
+      z-index: 1;
+      box-shadow: inset 0 -12px 20px rgba(90, 82, 66, .12);
+    }
+
+    .key.black {
+      top: 0;
+      width: calc(var(--key-width) * .62);
+      height: var(--black-height);
+      transform: translateX(-50%);
+      border: 1px solid var(--black-key-edge);
+      border-bottom-width: 7px;
+      border-radius: 0 0 5px 5px;
+      background: linear-gradient(90deg, #040507, var(--black-key) 22%, #2a2d34 50%, #06070a 100%);
+      color: rgba(255, 255, 255, .74);
+      z-index: 3;
+      box-shadow: 0 7px 13px rgba(0, 0, 0, .45);
+    }
+
+    .key.white.pressed {
+      border-bottom-width: 2px;
+      background: linear-gradient(180deg, #fff8df, #ffd98d);
+      box-shadow: inset 0 0 0 2px rgba(240, 184, 74, .32), 0 0 24px rgba(240, 184, 74, .28);
+    }
+
+    .key.black.pressed {
+      border-bottom-width: 3px;
+      background: linear-gradient(180deg, #4d3b16, #17110a);
+      box-shadow: 0 0 26px rgba(240, 184, 74, .34);
+    }
+
+    .help {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 20px;
+      padding: 0 6px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, .08);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      :root {
+        --key-width: 30px;
+        --white-height: 52vh;
+      }
+
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        min-height: 100svh;
+        padding: 10px;
+        gap: 10px;
+      }
+
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      h1 {
+        white-space: normal;
+      }
+
+      .controls {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>88键在线钢琴</h1>
+      <div class="status" id="activeNote" aria-live="polite">待弹奏</div>
+      <section class="controls" aria-label="钢琴控制">
+        <div class="control-group" aria-label="键盘八度">
+          <span class="label">八度</span>
+          <button id="octaveDown" type="button" aria-label="降低八度">-</button>
+          <strong id="octaveValue">4</strong>
+          <button id="octaveUp" type="button" aria-label="升高八度">+</button>
+        </div>
+        <div class="control-group">
+          <span class="label">延音</span>
+          <button id="sustainButton" type="button" aria-pressed="false">关</button>
+        </div>
+        <div class="control-group">
+          <label class="label" for="volume">音量</label>
+          <input id="volume" type="range" min="0" max="100" value="70">
+        </div>
+      </section>
+    </header>
+
+    <section class="stage" aria-label="完整88键钢琴">
+      <div class="keyboard-shell">
+        <div class="keyboard" id="keyboard"></div>
+      </div>
+    </section>
+
+    <p class="help">
+      电脑键盘白键 <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd>
+      黑键 <kbd>W</kbd><kbd>E</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd><kbd>O</kbd><kbd>P</kbd>
+    </p>
+  </main>
+
+  <script>
+    const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const WHITE_NOTES = new Set(["C", "D", "E", "F", "G", "A", "B"]);
+    const KEYBOARD_WHITE = ["a", "s", "d", "f", "g", "h", "j", "k", "l", ";"];
+    const KEYBOARD_BLACK = {
+      w: 1,
+      e: 3,
+      t: 6,
+      y: 8,
+      u: 10,
+      o: 13,
+      p: 15
+    };
+
+    const keyboard = document.getElementById("keyboard");
+    const activeNote = document.getElementById("activeNote");
+    const octaveValue = document.getElementById("octaveValue");
+    const sustainButton = document.getElementById("sustainButton");
+    const volumeInput = document.getElementById("volume");
+
+    const notes = createPianoKeys();
+    const activeVoices = new Map();
+    const heldComputerKeys = new Map();
+    let audioContext;
+    let masterGain;
+    let sustain = false;
+    let keyboardOctave = 4;
+
+    function midiToFrequency(midi) {
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function noteParts(note) {
+      const match = note.match(/^([A-G]#?)(-?\d)$/);
+      return { name: match[1], octave: Number(match[2]) };
+    }
+
+    function createPianoKeys() {
+      const result = [];
+      for (let midi = 21; midi <= 108; midi += 1) {
+        const name = NOTE_NAMES[midi % 12];
+        const octave = Math.floor(midi / 12) - 1;
+        result.push({
+          note: `${name}${octave}`,
+          name,
+          octave,
+          midi,
+          frequency: midiToFrequency(midi),
+          black: !WHITE_NOTES.has(name)
+        });
+      }
+      return result;
+    }
+
+    function renderKeyboard() {
+      keyboard.innerHTML = "";
+      let whiteIndex = 0;
+
+      notes.forEach((note) => {
+        const key = document.createElement("button");
+        key.type = "button";
+        key.className = `key ${note.black ? "black" : "white"}`;
+        key.dataset.note = note.note;
+        key.setAttribute("aria-label", `播放 ${note.note}`);
+        key.textContent = note.black ? "" : note.note;
+
+        if (note.black) {
+          key.style.left = `calc(var(--key-width) * ${whiteIndex})`;
+        } else {
+          key.style.left = `calc(var(--key-width) * ${whiteIndex})`;
+          whiteIndex += 1;
+        }
+
+        key.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          key.setPointerCapture(event.pointerId);
+          playNote(note.note);
+        });
+        key.addEventListener("pointerup", () => releaseNote(note.note));
+        key.addEventListener("pointercancel", () => releaseNote(note.note));
+        key.addEventListener("lostpointercapture", () => releaseNote(note.note));
+
+        keyboard.appendChild(key);
+      });
+    }
+
+    function ensureAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = Number(volumeInput.value) / 100;
+        masterGain.connect(audioContext.destination);
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+    }
+
+    function setPressed(note, pressed) {
+      const key = keyboard.querySelector(`[data-note="${note}"]`);
+      if (key) {
+        key.classList.toggle("pressed", pressed);
+      }
+      activeNote.textContent = pressed ? note : activeVoices.size ? Array.from(activeVoices.keys()).at(-1) : "待弹奏";
+    }
+
+    function playNote(noteName) {
+      ensureAudio();
+      const note = notes.find((item) => item.note === noteName);
+      if (!note || activeVoices.has(noteName)) {
+        return;
+      }
+
+      const now = audioContext.currentTime;
+      const voiceGain = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
+      const oscA = audioContext.createOscillator();
+      const oscB = audioContext.createOscillator();
+      const oscC = audioContext.createOscillator();
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(Math.min(8200, note.frequency * 9), now);
+      filter.frequency.exponentialRampToValueAtTime(Math.min(4200, note.frequency * 5), now + .45);
+      filter.Q.value = .7;
+
+      oscA.type = "triangle";
+      oscB.type = "sine";
+      oscC.type = "sine";
+      oscA.frequency.setValueAtTime(note.frequency, now);
+      oscB.frequency.setValueAtTime(note.frequency * 2.003, now);
+      oscC.frequency.setValueAtTime(note.frequency * .5, now);
+
+      const oscBGain = audioContext.createGain();
+      const oscCGain = audioContext.createGain();
+      oscBGain.gain.value = .22;
+      oscCGain.gain.value = note.frequency < 180 ? .28 : .1;
+
+      voiceGain.gain.setValueAtTime(.0001, now);
+      voiceGain.gain.exponentialRampToValueAtTime(.72, now + .015);
+      voiceGain.gain.exponentialRampToValueAtTime(.32, now + .18);
+      voiceGain.gain.exponentialRampToValueAtTime(.2, now + 1.2);
+
+      oscA.connect(filter);
+      oscB.connect(oscBGain);
+      oscC.connect(oscCGain);
+      oscBGain.connect(filter);
+      oscCGain.connect(filter);
+      filter.connect(voiceGain);
+      voiceGain.connect(masterGain);
+
+      oscA.start(now);
+      oscB.start(now);
+      oscC.start(now);
+
+      activeVoices.set(noteName, { oscillators: [oscA, oscB, oscC], gain: voiceGain });
+      setPressed(noteName, true);
+    }
+
+    function releaseNote(noteName, force = false) {
+      const voice = activeVoices.get(noteName);
+      if (!voice || (sustain && !force)) {
+        return;
+      }
+
+      const now = audioContext.currentTime;
+      const releaseTime = force ? .08 : sustain ? 1.4 : .42;
+      voice.gain.gain.cancelScheduledValues(now);
+      voice.gain.gain.setValueAtTime(Math.max(voice.gain.gain.value, .0001), now);
+      voice.gain.gain.exponentialRampToValueAtTime(.0001, now + releaseTime);
+      voice.oscillators.forEach((oscillator) => oscillator.stop(now + releaseTime + .04));
+      activeVoices.delete(noteName);
+      setPressed(noteName, false);
+    }
+
+    function noteFromComputerKey(key) {
+      const lowerKey = key.toLowerCase();
+      const startMidi = (keyboardOctave + 1) * 12;
+      let offset = KEYBOARD_WHITE.indexOf(lowerKey);
+
+      if (offset >= 0) {
+        const whiteOffsets = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16];
+        return notes.find((note) => note.midi === startMidi + whiteOffsets[offset])?.note;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(KEYBOARD_BLACK, lowerKey)) {
+        return notes.find((note) => note.midi === startMidi + KEYBOARD_BLACK[lowerKey])?.note;
+      }
+
+      return null;
+    }
+
+    function updateOctave(nextOctave) {
+      keyboardOctave = Math.max(1, Math.min(6, nextOctave));
+      octaveValue.textContent = keyboardOctave;
+    }
+
+    document.getElementById("octaveDown").addEventListener("click", () => updateOctave(keyboardOctave - 1));
+    document.getElementById("octaveUp").addEventListener("click", () => updateOctave(keyboardOctave + 1));
+    sustainButton.addEventListener("click", () => {
+      sustain = !sustain;
+      sustainButton.textContent = sustain ? "开" : "关";
+      sustainButton.classList.toggle("active", sustain);
+      sustainButton.setAttribute("aria-pressed", String(sustain));
+      if (!sustain) {
+        Array.from(activeVoices.keys()).forEach((note) => releaseNote(note, true));
+      }
+    });
+    volumeInput.addEventListener("input", () => {
+      if (masterGain) {
+        masterGain.gain.value = Number(volumeInput.value) / 100;
+      }
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      if (event.key === "z") {
+        updateOctave(keyboardOctave - 1);
+        return;
+      }
+
+      if (event.key === "x") {
+        updateOctave(keyboardOctave + 1);
+        return;
+      }
+
+      const note = noteFromComputerKey(event.key);
+      if (note) {
+        event.preventDefault();
+        heldComputerKeys.set(event.code, note);
+        playNote(note);
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      const note = heldComputerKeys.get(event.code);
+      if (note) {
+        heldComputerKeys.delete(event.code);
+        releaseNote(note);
+      }
+    });
+
+    renderKeyboard();
+    updateOctave(keyboardOctave);
+
+    window.__pianoTest = {
+      keyCount: notes.length,
+      firstNote: notes[0].note,
+      lastNote: notes[notes.length - 1].note,
+      get activeVoices() {
+        return activeVoices.size;
+      }
+    };
+  </script>
+</body>
+</html>
