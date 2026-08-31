@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>图片转 ICO</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family:
+        Inter,
+        "Microsoft YaHei",
+        Arial,
+        sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 760px;
+      background: #fff;
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.08),
+        0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      text-align: center;
+    }
+
+    .desc {
+      text-align: center;
+      color: #6b7280;
+      margin: 12px 0 28px;
+      line-height: 1.6;
+    }
+
+    .upload-area {
+      position: relative;
+      border: 2px dashed #cbd5e1;
+      border-radius: 20px;
+      min-height: 230px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.2s;
+      overflow: hidden;
+      background: #fafbfe;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .upload-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: #e8f0ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 14px;
+    }
+
+    .upload-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .upload-sub {
+      color: #94a3b8;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .preview-wrap {
+      display: none;
+      margin-top: 24px;
+    }
+
+    .preview-wrap.show {
+      display: block;
+    }
+
+    .preview-card {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      padding: 18px;
+      background: #f8fafc;
+      border-radius: 18px;
+    }
+
+    .preview-box {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+      border-radius: 16px;
+      background:
+        linear-gradient(45deg, #eee 25%, transparent 25%),
+        linear-gradient(-45deg, #eee 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eee 75%),
+        linear-gradient(-45deg, transparent 75%, #eee 75%);
+      background-size: 20px 20px;
+      background-position:
+        0 0,
+        0 10px,
+        10px -10px,
+        -10px 0px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .file-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .file-name {
+      font-weight: 700;
+      font-size: 16px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-meta {
+      color: #6b7280;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    .options {
+      margin-top: 24px;
+    }
+
+    .option-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .sizes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .size-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 12px;
+      border: 1px solid #dbe2ea;
+      border-radius: 12px;
+      cursor: pointer;
+      user-select: none;
+      background: white;
+    }
+
+    .size-item:hover {
+      border-color: #93c5fd;
+    }
+
+    .size-item input {
+      accent-color: #2563eb;
+    }
+
+    .setting-row {
+      margin-top: 20px;
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .setting {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    select {
+      width: 100%;
+      margin-top: 8px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid #dbe2ea;
+      background: white;
+      outline: none;
+      font-size: 14px;
+    }
+
+    select:focus {
+      border-color: #2563eb;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      height: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    #convertBtn {
+      flex: 1;
+      background: #2563eb;
+      color: white;
+    }
+
+    #convertBtn:hover {
+      background: #1d4ed8;
+    }
+
+    #convertBtn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    #resetBtn {
+      padding: 0 22px;
+      background: #eef2f7;
+      color: #475569;
+    }
+
+    #resetBtn:hover {
+      background: #e2e8f0;
+    }
+
+    .status {
+      margin-top: 16px;
+      text-align: center;
+      min-height: 24px;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .status.success {
+      color: #16a34a;
+    }
+
+    .status.error {
+      color: #dc2626;
+    }
+
+    .tip {
+      margin-top: 24px;
+      background: #f8fafc;
+      padding: 14px 16px;
+      border-radius: 14px;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 14px;
+      }
+
+      .app {
+        padding: 22px 16px;
+        border-radius: 18px;
+      }
+
+      .preview-card {
+        align-items: flex-start;
+      }
+
+      .preview-box {
+        width: 90px;
+        height: 90px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <h1>图片转 ICO</h1>
+
+  <div class="desc">
+    上传图片，一键转换成包含多种尺寸的标准 ICO 图标文件。
+    <br>
+    所有转换都在浏览器本地完成。
+  </div>
+
+  <label class="upload-area" id="uploadArea">
+
+    <input
+      id="fileInput"
+      type="file"
+      accept="image/png,image/jpeg,image/webp,image/gif"
+    />
+
+    <div class="upload-icon">🖼️</div>
+
+    <div class="upload-title">
+      点击或拖拽图片到这里
+    </div>
+
+    <div class="upload-sub">
+      支持 PNG / JPG / WebP / GIF
+    </div>
+
+  </label>
+
+
+  <div class="preview-wrap" id="previewWrap">
+
+    <div class="preview-card">
+
+      <div class="preview-box">
+        <img id="previewImage" alt="预览">
+      </div>
+
+      <div class="file-info">
+
+        <div class="file-name" id="fileName"></div>
+
+        <div class="file-meta" id="fileMeta"></div>
+
+      </div>
+
+    </div>
+
+
+    <div class="options">
+
+      <div class="option-title">
+        ICO 包含尺寸
+      </div>
+
+      <div class="sizes">
+
+        <label class="size-item">
+          <input type="checkbox" value="16" checked>
+          16 × 16
+        </label>
+
+        <label class="size-item">
+          <input type="checkbox" value="32" checked>
+          32 × 32
+        </label>
+
+        <label class="size-item">
+          <input type="checkbox" value="48" checked>
+          48 × 48
+        </label>
+
+        <label class="size-item">
+          <input type="checkbox" value="64" checked>
+          64 × 64
+        </label>
+
+        <label class="size-item">
+          <input type="checkbox" value="128" checked>
+          128 × 128
+        </label>
+
+        <label class="size-item">
+          <input type="checkbox" value="256" checked>
+          256 × 256
+        </label>
+
+      </div>
+
+
+      <div class="setting-row">
+
+        <div class="setting">
+
+          <div class="option-title">
+            图片适配方式
+          </div>
+
+          <select id="fitMode">
+
+            <option value="contain">
+              完整显示（可能有透明边）
+            </option>
+
+            <option value="cover">
+              铺满图标（可能裁剪）
+            </option>
+
+            <option value="stretch">
+              强制拉伸
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="actions">
+
+      <button id="convertBtn">
+        转换并下载 ICO
+      </button>
+
+      <button id="resetBtn">
+        重置
+      </button>
+
+    </div>
+
+
+    <div class="status" id="status"></div>
+
+  </div>
+
+
+  <div class="tip">
+    💡 Windows 图标通常建议同时包含
+    16、32、48、64、128 和 256 像素尺寸。
+    本工具会将多个 PNG 图层封装到同一个 ICO 文件中。
+  </div>
+
+</div>
+
+
+<script>
+
+const fileInput = document.getElementById("fileInput");
+const uploadArea = document.getElementById("uploadArea");
+
+const previewWrap = document.getElementById("previewWrap");
+const previewImage = document.getElementById("previewImage");
+
+const fileName = document.getElementById("fileName");
+const fileMeta = document.getElementById("fileMeta");
+
+const convertBtn = document.getElementById("convertBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const fitMode = document.getElementById("fitMode");
+
+const statusEl = document.getElementById("status");
+
+let currentImage = null;
+let currentFile = null;
+
+
+/* ==============================
+   上传
+================================ */
+
+fileInput.addEventListener("change", e => {
+
+  const file = e.target.files[0];
+
+  if (file) {
+    loadFile(file);
+  }
+
+});
+
+
+uploadArea.addEventListener("dragover", e => {
+
+  e.preventDefault();
+
+  uploadArea.classList.add("dragover");
+
+});
+
+
+uploadArea.addEventListener("dragleave", () => {
+
+  uploadArea.classList.remove("dragover");
+
+});
+
+
+uploadArea.addEventListener("drop", e => {
+
+  e.preventDefault();
+
+  uploadArea.classList.remove("dragover");
+
+  const file = e.dataTransfer.files[0];
+
+  if (file) {
+    loadFile(file);
+  }
+
+});
+
+
+function loadFile(file) {
+
+  if (!file.type.startsWith("image/")) {
+
+    showStatus(
+      "请选择图片文件。",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const reader = new FileReader();
+
+  reader.onload = event => {
+
+    const img = new Image();
+
+    img.onload = () => {
+
+      currentImage = img;
+      currentFile = file;
+
+      previewImage.src = event.target.result;
+
+      fileName.textContent = file.name;
+
+      fileMeta.textContent =
+        `${img.naturalWidth} × ${img.naturalHeight} px · ` +
+        formatSize(file.size);
+
+      previewWrap.classList.add("show");
+
+      showStatus("");
+
+    };
+
+    img.src = event.target.result;
+
+  };
+
+  reader.readAsDataURL(file);
+
+}
+
+
+/* ==============================
+   转换
+================================ */
+
+convertBtn.addEventListener("click", async () => {
+
+  if (!currentImage) {
+
+    showStatus(
+      "请先上传图片。",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const sizeInputs =
+    document.querySelectorAll(
+      '.size-item input[type="checkbox"]:checked'
+    );
+
+
+  const sizes =
+    Array.from(sizeInputs)
+      .map(input => Number(input.value))
+      .sort((a, b) => a - b);
+
+
+  if (!sizes.length) {
+
+    showStatus(
+      "请至少选择一个尺寸。",
+      "error"
+    );
+
+    return;
+  }
+
+
+  try {
+
+    convertBtn.disabled = true;
+
+    convertBtn.textContent =
+      "正在生成...";
+
+    showStatus(
+      "正在生成 ICO..."
+    );
+
+
+    const pngBuffers = [];
+
+
+    for (const size of sizes) {
+
+      const pngBuffer =
+        await createPngBuffer(
+          currentImage,
+          size,
+          fitMode.value
+        );
+
+      pngBuffers.push({
+        size,
+        buffer: pngBuffer
+      });
+
+    }
+
+
+    const icoBuffer =
+      createIcoFile(pngBuffers);
+
+
+    const blob =
+      new Blob(
+        [icoBuffer],
+        {
+          type: "image/x-icon"
+        }
+      );
+
+
+    downloadBlob(
+      blob,
+      buildOutputName(
+        currentFile.name
+      )
+    );
+
+
+    showStatus(
+      `转换成功，共写入 ${sizes.length} 个尺寸。`,
+      "success"
+    );
+
+  }
+
+  catch (err) {
+
+    console.error(err);
+
+    showStatus(
+      "转换失败：" + err.message,
+      "error"
+    );
+
+  }
+
+  finally {
+
+    convertBtn.disabled = false;
+
+    convertBtn.textContent =
+      "转换并下载 ICO";
+
+  }
+
+});
+
+
+/* ==============================
+   Canvas 生成 PNG
+================================ */
+
+async function createPngBuffer(
+  img,
+  size,
+  mode
+) {
+
+  const canvas =
+    document.createElement("canvas");
+
+  canvas.width = size;
+  canvas.height = size;
+
+
+  const ctx =
+    canvas.getContext("2d");
+
+
+  ctx.clearRect(
+    0,
+    0,
+    size,
+    size
+  );
+
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+
+
+  let dx = 0;
+  let dy = 0;
+
+  let dw = size;
+  let dh = size;
+
+
+  if (mode === "contain") {
+
+    const scale =
+      Math.min(
+        size / iw,
+        size / ih
+      );
+
+    dw = iw * scale;
+    dh = ih * scale;
+
+    dx = (size - dw) / 2;
+    dy = (size - dh) / 2;
+
+  }
+
+
+  else if (mode === "cover") {
+
+    const scale =
+      Math.max(
+        size / iw,
+        size / ih
+      );
+
+    dw = iw * scale;
+    dh = ih * scale;
+
+    dx = (size - dw) / 2;
+    dy = (size - dh) / 2;
+
+  }
+
+
+  ctx.drawImage(
+    img,
+    dx,
+    dy,
+    dw,
+    dh
+  );
+
+
+  const blob =
+    await new Promise(
+      (resolve, reject) => {
+
+        canvas.toBlob(
+          blob => {
+
+            if (blob) {
+              resolve(blob);
+            }
+            else {
+              reject(
+                new Error(
+                  "Canvas 无法生成 PNG"
+                )
+              );
+            }
+
+          },
+          "image/png"
+        );
+
+      }
+    );
+
+
+  return await blob.arrayBuffer();
+
+}
+
+
+/* ==============================
+   ICO 文件生成
+================================ */
+
+function createIcoFile(images) {
+
+  const count = images.length;
+
+  const headerSize = 6;
+
+  const directorySize =
+    16 * count;
+
+  let dataOffset =
+    headerSize +
+    directorySize;
+
+
+  let totalSize =
+    dataOffset;
+
+
+  for (const image of images) {
+
+    totalSize +=
+      image.buffer.byteLength;
+
+  }
+
+
+  const buffer =
+    new ArrayBuffer(totalSize);
+
+  const view =
+    new DataView(buffer);
+
+
+  /*
+      ICONDIR
+
+      Reserved 2 bytes
+      Type     2 bytes
+      Count    2 bytes
+  */
+
+  view.setUint16(
+    0,
+    0,
+    true
+  );
+
+  view.setUint16(
+    2,
+    1,
+    true
+  );
+
+  view.setUint16(
+    4,
+    count,
+    true
+  );
+
+
+  let entryOffset = 6;
+
+
+  for (
+    let i = 0;
+    i < count;
+    i++
+  ) {
+
+    const item =
+      images[i];
+
+    const size =
+      item.size;
+
+    const dataLength =
+      item.buffer.byteLength;
+
+
+    /*
+        ICONDIRENTRY
+
+        width
+        height
+        color count
+        reserved
+        planes
+        bit count
+        bytes in resource
+        image offset
+    */
+
+
+    view.setUint8(
+      entryOffset,
+      size >= 256 ? 0 : size
+    );
+
+    view.setUint8(
+      entryOffset + 1,
+      size >= 256 ? 0 : size
+    );
+
+
+    view.setUint8(
+      entryOffset + 2,
+      0
+    );
+
+
+    view.setUint8(
+      entryOffset + 3,
+      0
+    );
+
+
+    view.setUint16(
+      entryOffset + 4,
+      1,
+      true
+    );
+
+
+    view.setUint16(
+      entryOffset + 6,
+      32,
+      true
+    );
+
+
+    view.setUint32(
+      entryOffset + 8,
+      dataLength,
+      true
+    );
+
+
+    view.setUint32(
+      entryOffset + 12,
+      dataOffset,
+      true
+    );
+
+
+    entryOffset += 16;
+
+    dataOffset +=
+      dataLength;
+
+  }
+
+
+  const bytes =
+    new Uint8Array(buffer);
+
+
+  let offset =
+    headerSize +
+    directorySize;
+
+
+  for (const item of images) {
+
+    bytes.set(
+      new Uint8Array(item.buffer),
+      offset
+    );
+
+    offset +=
+      item.buffer.byteLength;
+
+  }
+
+
+  return buffer;
+
+}
+
+
+/* ==============================
+   下载
+================================ */
+
+function downloadBlob(
+  blob,
+  filename
+) {
+
+  const url =
+    URL.createObjectURL(blob);
+
+
+  const a =
+    document.createElement("a");
+
+  a.href = url;
+  a.download = filename;
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  a.remove();
+
+
+  setTimeout(
+    () => {
+      URL.revokeObjectURL(url);
+    },
+    1000
+  );
+
+}
+
+
+function buildOutputName(
+  filename
+) {
+
+  const name =
+    filename.replace(
+      /\.[^.]+$/,
+      ""
+    );
+
+  return name + ".ico";
+
+}
+
+
+/* ==============================
+   重置
+================================ */
+
+resetBtn.addEventListener(
+  "click",
+  () => {
+
+    currentImage = null;
+    currentFile = null;
+
+    fileInput.value = "";
+
+    previewImage.src = "";
+
+    previewWrap.classList.remove(
+      "show"
+    );
+
+    showStatus("");
+
+  }
+);
+
+
+/* ==============================
+   工具函数
+================================ */
+
+function formatSize(bytes) {
+
+  if (bytes < 1024) {
+
+    return bytes + " B";
+
+  }
+
+
+  if (bytes < 1024 * 1024) {
+
+    return (
+      bytes / 1024
+    ).toFixed(1) + " KB";
+
+  }
+
+
+  return (
+    bytes /
+    1024 /
+    1024
+  ).toFixed(2) + " MB";
+
+}
+
+
+function showStatus(
+  text,
+  type = ""
+) {
+
+  statusEl.textContent = text;
+
+  statusEl.className =
+    "status " + type;
+
+}
+
+</script>
+
+</body>
+</html>
