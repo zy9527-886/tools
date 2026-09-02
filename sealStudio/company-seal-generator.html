@@ -265,6 +265,14 @@ footer { width: min(1240px, calc(100% - 48px)); margin: 50px auto 26px; color: #
                 <div><label for="starSize">五角星大小</label><output id="starSizeValue" for="starSize">92 px</output></div>
                 <input id="starSize" type="range" min="40" max="160" value="92">
               </div>
+              <div class="range-field">
+                <div><label for="numberFontSize">编号文字大小</label><output id="numberFontSizeValue" for="numberFontSize">29 px</output></div>
+                <input id="numberFontSize" type="range" min="14" max="64" value="29">
+              </div>
+              <div class="range-field">
+                <div><label for="numberCurve">编号曲率</label><output id="numberCurveValue" for="numberCurve">0%</output></div>
+                <input id="numberCurve" type="range" min="-100" max="100" value="0">
+              </div>
             </div>
           </details>
 
@@ -354,6 +362,8 @@ const DEFAULTS = Object.freeze({
   letterSpacing: 8,
   borderWidth: 12,
   starSize: 92,
+  numberFontSize: 29,
+  numberCurve: 0,
   opacity: 100,
   rotation: 0,
   distress: 8,
@@ -381,6 +391,8 @@ function normalizeState(raw = {}) {
     letterSpacing: clamp(raw.letterSpacing ?? DEFAULTS.letterSpacing, 0, 24),
     borderWidth: clamp(raw.borderWidth ?? DEFAULTS.borderWidth, 4, 24),
     starSize: clamp(raw.starSize ?? DEFAULTS.starSize, 40, 160),
+    numberFontSize: clamp(raw.numberFontSize ?? DEFAULTS.numberFontSize, 14, 64),
+    numberCurve: clamp(raw.numberCurve ?? DEFAULTS.numberCurve, -100, 100),
     opacity: clamp(raw.opacity ?? DEFAULTS.opacity, 20, 100),
     rotation: clamp(raw.rotation ?? DEFAULTS.rotation, -180, 180),
     distress: clamp(raw.distress ?? DEFAULTS.distress, 0, 60),
@@ -476,12 +488,50 @@ function drawStar(ctx, cx, cy, radius) {
 
 function drawNumber(ctx, state, size) {
   if (!state.sealNumber) return;
-  const numberSize = clamp(size * 0.036, 18, 44);
+
+  const numberSize = state.numberFontSize;
+  const curve = state.numberCurve / 100;
+  const baseY = size * 0.275;
+  const chars = [...state.sealNumber];
+
   ctx.save();
   ctx.font = `600 ${numberSize}px ui-monospace, "SFMono-Regular", Consolas, monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(state.sealNumber, 0, size * 0.275);
+
+  // 0% 时保持原来的水平编号；正值向下弯，负值向上弯。
+  if (Math.abs(curve) < 0.001 || chars.length <= 1) {
+    ctx.fillText(state.sealNumber, 0, baseY);
+    ctx.restore();
+    return;
+  }
+
+  const widths = chars.map((char) => ctx.measureText(char).width);
+  const spacing = Math.max(1, numberSize * 0.08);
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + spacing * Math.max(0, chars.length - 1);
+  const maxAngle = Math.abs(curve) * Math.min(Math.PI * 0.92, totalWidth / (size * 0.20));
+  const radius = Math.max(size * 0.16, totalWidth / Math.max(maxAngle, 0.08));
+  const centerY = baseY - Math.sign(curve) * radius;
+  let offset = -totalWidth / 2;
+
+  chars.forEach((char, index) => {
+    const charCenter = offset + widths[index] / 2;
+    const angle = charCenter / radius;
+    const signedAngle = angle * Math.sign(curve);
+    const x = Math.sin(signedAngle) * radius;
+    const y = centerY + Math.sign(curve) * Math.cos(signedAngle) * radius;
+
+    ctx.save();
+    ctx.translate(x, y);
+    // 每个数字按当前位置反向旋转，使数字的竖直轴始终指向弧线圆心（向心），
+    // 而不是顺着弧线继续倾斜。
+    ctx.rotate(-signedAngle);
+    ctx.fillText(char, 0, 0);
+    ctx.restore();
+
+    offset += widths[index] + spacing;
+  });
+
   ctx.restore();
 }
 
@@ -561,7 +611,7 @@ function initApp() {
 
   const controlIds = [
     'companyName', 'sealNumber', 'sealColor', 'sealSize', 'fontSize',
-    'letterSpacing', 'borderWidth', 'starSize', 'opacity', 'rotation',
+    'letterSpacing', 'borderWidth', 'starSize', 'numberFontSize', 'numberCurve', 'opacity', 'rotation',
     'distress', 'overlayScale', 'overlayOpacity',
   ];
   const controls = Object.fromEntries(controlIds.map((id) => [id, document.getElementById(id)]));
@@ -586,6 +636,8 @@ function initApp() {
     letterSpacing: (value) => `${value} px`,
     borderWidth: (value) => `${value} px`,
     starSize: (value) => `${value} px`,
+    numberFontSize: (value) => `${value} px`,
+    numberCurve: (value) => `${Number(value) > 0 ? '+' : ''}${value}%`,
     opacity: (value) => `${value}%`,
     rotation: (value) => `${value}°`,
     distress: (value) => `${value}%`,
@@ -622,6 +674,8 @@ function initApp() {
       letterSpacing: controls.letterSpacing.value,
       borderWidth: controls.borderWidth.value,
       starSize: controls.starSize.value,
+      numberFontSize: controls.numberFontSize.value,
+      numberCurve: controls.numberCurve.value,
       opacity: controls.opacity.value,
       rotation: controls.rotation.value,
       distress: controls.distress.value,
